@@ -1,0 +1,63 @@
+# .github/workflows/daily-log.yml
+name: Daily Log
+
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  daily-log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Environment
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Create Daily Log
+        run: |
+          # 设置时区
+          export TZ='Asia/Shanghai'
+          
+          DATE=$(date '+%Y-%m-%d')
+          YEAR=$(date '+%Y')
+          MONTH=$(date '+%m')
+          DAY_OF_YEAR=$(date '+%j')
+          WEEK=$(date '+%V')
+          WEEKDAY=$(date '+%A')
+          
+          # 创建目录结构
+          mkdir -p "logs/$YEAR/$MONTH"
+          
+          # 生成日志内容
+          cat > "logs/$YEAR/$MONTH/$DATE.md" << EOF
+          # 📅 $DATE ($WEEKDAY)
+          
+          ## 📊 今日统计
+          - 🗓️ 今年第 $DAY_OF_YEAR 天
+          - 📅 第 $WEEK 周
+          - ⏰ 记录时间: $(date '+%H:%M:%S')
+          
+          
+          ## 📝 备注
+          自动生成于 GitHub Actions
+          EOF
+          
+          # 更新 README 统计
+          echo "Last updated: $DATE $(date '+%H:%M:%S')" > README.md
+          echo "" >> README.md
+          echo "Total logs: $(find logs -name "*.md" | wc -l)" >> README.md
+
+      - name: Commit and Push
+        run: |
+          git add -A
+          git diff-index --quiet HEAD || git commit -m "📝 Daily log: $(date '+%Y-%m-%d')"
+          git push
