@@ -1,5 +1,5 @@
 # .github/workflows/daily-log.yml
-name: Daily Log
+name: Monthly Log
 
 on:
   schedule:
@@ -22,7 +22,7 @@ jobs:
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
 
-      - name: Create Daily Log
+      - name: Create Monthly Log
         run: |
           # 设置时区
           export TZ='Asia/Shanghai'
@@ -30,34 +30,101 @@ jobs:
           DATE=$(date '+%Y-%m-%d')
           YEAR=$(date '+%Y')
           MONTH=$(date '+%m')
+          MONTH_NAME=$(date '+%Y-%m')
           DAY_OF_YEAR=$(date '+%j')
           WEEK=$(date '+%V')
           WEEKDAY=$(date '+%A')
           
           # 创建目录结构
-          mkdir -p "logs/$YEAR/$MONTH"
+          mkdir -p "logs/$YEAR"
           
-          # 生成日志内容
-          cat > "logs/$YEAR/$MONTH/$DATE.md" << EOF
-          # 📅 $DATE ($WEEKDAY)
+          # 月度日志文件路径
+          LOG_FILE="logs/$YEAR/$MONTH_NAME.md"
           
-          ## 📊 今日统计
+          # 如果文件不存在，创建带有标题的新文件
+          if [ ! -f "$LOG_FILE" ]; then
+            cat > "$LOG_FILE" << EOF
+          # 📅 $MONTH_NAME 月度记录
+          
+          > 本文档记录 $MONTH_NAME 的日常更新
+          
+          ---
+          
+          EOF
+          fi
+          
+          # 励志语录数组
+          QUOTES=(
+            "💪 每一天都是新的开始，加油！"
+            "🌟 成功源于每一天的积累与坚持。"
+            "🚀 今天的努力，是为了更好的明天。"
+            "✨ 相信自己，你比想象中更强大。"
+            "🌈 困难只是暂时的，坚持就是胜利。"
+            "🎯 专注当下，全力以赴。"
+            "💎 每一次努力都不会被辜负。"
+            "🌸 保持热爱，奔赴山海。"
+            "⭐ 行动是治愈恐惧的良药。"
+            "🔥 你的坚持，终将美好。"
+            "🌻 种一棵树最好的时间是十年前，其次是现在。"
+            "🎈 不要等待机会，而要创造机会。"
+            "🌺 成功不是偶然，而是必然。"
+            "🏆 今日事今日毕，明天会更好。"
+            "💫 保持进步，永不止步。"
+            "🌙 星光不问赶路人，时光不负有心人。"
+            "🎨 生活是自己创造的画布。"
+            "📚 学习是一生的财富。"
+            "🌊 不积跬步，无以至千里。"
+            "🎵 热爱生活，享受当下。"
+          )
+          
+          # 检查今天是否已经打卡
+          if grep -q "## 📝 $DATE" "$LOG_FILE"; then
+            echo "✅ 今日 ($DATE) 已经打卡过了，跳过重复记录"
+          else
+            echo "📝 开始记录今日 ($DATE) 的打卡信息..."
+            
+            # 随机选择一条语录（使用日期作为随机种子，确保每天不同）
+            RANDOM_INDEX=$((10#$(date '+%d') % ${#QUOTES[@]}))
+            DAILY_QUOTE="${QUOTES[$RANDOM_INDEX]}"
+            
+            # 追加今日记录
+            cat >> "$LOG_FILE" << EOF
+          ## 📝 $DATE ($WEEKDAY)
+          
           - 🗓️ 今年第 $DAY_OF_YEAR 天
           - 📅 第 $WEEK 周
-          - ⏰ 记录时间: $(date '+%H:%M:%S')
+          - ⏰ 更新时间: $(date '+%H:%M:%S')
           
+          ### 💬 今日寄语
+          > $DAILY_QUOTE
           
-          ## 📝 备注
-          自动生成于 GitHub Actions
+          ---
+          
           EOF
+            echo "✨ 今日打卡完成！"
+          fi
           
-          # 更新 README 统计
-          echo "Last updated: $DATE $(date '+%H:%M:%S')" > README.md
-          echo "" >> README.md
-          echo "Total logs: $(find logs -name "*.md" | wc -l)" >> README.md
+          # 更新 README 中的最后打卡时间（保留其他内容）
+          if [ -f "README.md" ]; then
+            # 删除旧的打卡时间标记行（如果存在）
+            sed -i.bak '/<!-- AUTO_CHECKIN_START -->/,/<!-- AUTO_CHECKIN_END -->/d' README.md
+            rm -f README.md.bak
+          else
+            # 如果 README 不存在，创建一个简单的
+            echo "# Daily Log" > README.md
+            echo "" >> README.md
+          fi
+          
+          # 在文件末尾添加新的打卡时间标记
+          cat >> README.md << EOF
+          
+          <!-- AUTO_CHECKIN_START -->
+          **📅 最后打卡时间**: $DATE $(date '+%H:%M:%S')
+          <!-- AUTO_CHECKIN_END -->
+          EOF
 
       - name: Commit and Push
         run: |
           git add -A
-          git diff-index --quiet HEAD || git commit -m "📝 Daily log: $(date '+%Y-%m-%d')"
+          git diff-index --quiet HEAD || git commit -m "📝 Monthly log update: $(date '+%Y-%m-%d')"
           git push
